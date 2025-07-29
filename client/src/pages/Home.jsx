@@ -1,48 +1,97 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Image, Mic, TrendingUp, Zap, Shield, Filter, BarChart3, Brain, Clock, Star, ChevronRight, Play, Upload, DollarSign } from 'lucide-react';
+import { Search, Upload, Mic, Filter, Sparkles, TrendingUp, Star, Heart, ShoppingCart, User, Menu, X } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import AuthModal from '../components/auth/AuthModal';
 
-const AIProductRecommendationLanding = () => {
-  const [currentFeature, setCurrentFeature] = useState(0);
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [isVisible, setIsVisible] = useState({});
+const Home = () => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authMode, setAuthMode] = useState('login');
+  const [searchHistory, setSearchHistory] = useState([
+    'iPhone 15 Pro', 'MacBook Air M2', 'Sony WH-1000XM5', 'Nike Air Max'
+  ]);
 
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      setMousePosition({ x: e.clientX, y: e.clientY });
-    };
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, []);
+  const { user, logout, isAuthenticated } = useAuth();
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentFeature((prev) => (prev + 1) % 4);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const features = [
-    { icon: Brain, title: "AI-Powered NLP", desc: "Context-aware recommendations using advanced Natural Language Processing" },
-    { icon: Image, title: "Visual Search", desc: "Upload images for AI-driven product recognition and discovery" },
-    { icon: BarChart3, title: "Real-Time Analysis", desc: "Live sentiment analysis and price comparison across platforms" },
-    { icon: TrendingUp, title: "Dynamic Learning", desc: "Adaptive algorithms that learn from user behavior and preferences" }
+  // Sample featured products for demonstration
+  const featuredProducts = [
+    {
+      id: 1,
+      name: 'iPhone 15 Pro Max',
+      price: 1199,
+      originalPrice: 1299,
+      rating: 4.8,
+      reviews: 1247,
+      image: 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=400&h=400&fit=crop',
+      platform: 'Apple Store',
+      isAIRecommended: true
+    },
+    {
+      id: 2,
+      name: 'MacBook Air M2',
+      price: 1099,
+      originalPrice: 1199,
+      rating: 4.9,
+      reviews: 892,
+      image: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400&h=400&fit=crop',
+      platform: 'Amazon',
+      isAIRecommended: true
+    },
+    {
+      id: 3,
+      name: 'Sony WH-1000XM5',
+      price: 349,
+      originalPrice: 399,
+      rating: 4.7,
+      reviews: 2156,
+      image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop',
+      platform: 'Best Buy',
+      isAIRecommended: false
+    },
+    {
+      id: 4,
+      name: 'Nike Air Max 270',
+      price: 150,
+      originalPrice: 180,
+      rating: 4.6,
+      reviews: 3421,
+      image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=400&fit=crop',
+      platform: 'Nike',
+      isAIRecommended: true
+    }
   ];
 
-  const stats = [
-    { value: "99.9%", label: "Real-Time Accuracy", icon: Clock },
-    { value: "50+", label: "E-commerce Platforms", icon: Shield },
-    { value: "∞", label: "Product Database", icon: Zap },
-    { value: "AI", label: "Powered Intelligence", icon: Brain }
-  ];
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      // TODO: Implement search functionality
+      console.log('Searching for:', searchQuery);
+    }
+  };
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // TODO: Implement image search
+      console.log('Image uploaded:', file);
+    }
+  };
+
+  const handleVoiceSearch = () => {
+    // TODO: Implement voice search
+    console.log('Voice search activated');
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white overflow-hidden relative">
+    <div className="min-h-screen bg-gradient-to-br from-[#0d1117] via-[#1a1a1a] to-[#262626] text-white overflow-hidden">
       {/* Animated background particles */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(20)].map((_, i) => (
+        {[...Array(15)].map((_, i) => (
           <div
             key={i}
-            className="absolute w-1 h-1 bg-purple-400 rounded-full animate-pulse"
+            className="absolute w-1 h-1 bg-purple-500/30 rounded-full animate-pulse"
             style={{
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
@@ -53,261 +102,345 @@ const AIProductRecommendationLanding = () => {
         ))}
       </div>
 
-      {/* Cursor trail effect */}
-      <div
-        className="fixed w-6 h-6 pointer-events-none z-50 mix-blend-difference"
-        style={{
-          left: mousePosition.x - 12,
-          top: mousePosition.y - 12,
-          background: 'radial-gradient(circle, rgba(168,85,247,0.8) 0%, transparent 70%)',
-          transition: 'all 0.1s ease-out'
-        }}
-      />
-
       {/* Header */}
-      <header className="relative z-10 p-6">
-        <nav className="flex justify-between items-center max-w-7xl mx-auto">
+      <header className="relative z-10 backdrop-blur-md bg-black/20 border-b border-[#374151]/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo */}
           <div className="flex items-center space-x-2 group">
-            <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center transform group-hover:rotate-12 transition-transform duration-300">
-              <Brain className="w-6 h-6" />
+              <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-teal-500 rounded-lg flex items-center justify-center transform group-hover:rotate-12 transition-transform duration-300">
+                <Sparkles className="w-6 h-6" />
+              </div>
+              <span className="text-xl font-bold bg-gradient-to-r from-purple-400 to-teal-400 bg-clip-text text-transparent">
+                FindONE
+              </span>
             </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-              Find One
-            </span>
-          </div>
-          <div className="hidden md:flex space-x-8">
-            {['Features', 'Technology', 'Demo', 'Contact'].map((item, index) => (
-              <a
-                key={item}
-                href={`#${item.toLowerCase()}`}
-                className="hover:text-purple-300 transition-colors duration-300 relative group"
-              >
-                {item}
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-purple-400 group-hover:w-full transition-all duration-300" />
+
+            {/* Desktop Navigation */}
+            <nav className="hidden md:flex items-center space-x-8">
+              <a href="#features" className="text-gray-300 hover:text-white transition-colors duration-200">
+                Features
               </a>
-            ))}
+              <a href="#about" className="text-gray-300 hover:text-white transition-colors duration-200">
+                About
+              </a>
+              <a href="#contact" className="text-gray-300 hover:text-white transition-colors duration-200">
+                Contact
+              </a>
+            </nav>
+
+            {/* User Actions */}
+            <div className="flex items-center space-x-4">
+              {isAuthenticated ? (
+                <div className="flex items-center space-x-3">
+                  <button className="p-2 text-gray-300 hover:text-white transition-colors duration-200">
+                    <Heart className="w-5 h-5" />
+                  </button>
+                  <button className="p-2 text-gray-300 hover:text-white transition-colors duration-200">
+                    <ShoppingCart className="w-5 h-5" />
+                  </button>
+                  <div className="flex items-center space-x-2 bg-gradient-to-r from-purple-500/20 to-teal-500/20 hover:from-purple-500/30 hover:to-teal-500/30 px-4 py-2 rounded-lg border border-purple-500/30 transition-all duration-200">
+                    <User className="w-4 h-4" />
+                    <span className="text-sm">{user?.name || 'Profile'}</span>
+                  </div>
+                  <button 
+                    onClick={logout}
+                    className="text-gray-300 hover:text-white transition-colors duration-200"
+                  >
+                    Logout
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-3">
+                  <button 
+                    onClick={() => {
+                      setAuthMode('login');
+                      setShowAuthModal(true);
+                    }}
+                    className="text-gray-300 hover:text-white transition-colors duration-200"
+                  >
+                    Sign In
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setAuthMode('register');
+                      setShowAuthModal(true);
+                    }}
+                    className="bg-gradient-to-r from-purple-500 to-teal-500 hover:from-purple-600 hover:to-teal-600 px-4 py-2 rounded-lg transition-all duration-200 transform hover:scale-105"
+                  >
+                    Sign Up
+                  </button>
           </div>
-        </nav>
+              )}
+
+              {/* Mobile Menu Button */}
+              <button
+                className="md:hidden p-2 text-gray-300 hover:text-white transition-colors duration-200"
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+              >
+                {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Menu */}
+        {isMenuOpen && (
+          <div className="md:hidden absolute top-full left-0 right-0 bg-black/90 backdrop-blur-md border-b border-[#374151]/50">
+            <div className="px-4 py-4 space-y-4">
+              <a href="#features" className="block text-gray-300 hover:text-white transition-colors duration-200">
+                Features
+              </a>
+              <a href="#about" className="block text-gray-300 hover:text-white transition-colors duration-200">
+                About
+              </a>
+              <a href="#contact" className="block text-gray-300 hover:text-white transition-colors duration-200">
+                Contact
+              </a>
+            </div>
+          </div>
+        )}
       </header>
 
-      {/* Hero Section */}
-      <section className="relative z-10 max-w-7xl mx-auto px-6 pt-20 pb-32">
+      {/* Hero Section with Search */}
+      <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-32">
         <div className="text-center mb-16">
-          <div className="inline-block animate-bounce mb-8">
-            <div className="w-20 h-20 bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 rounded-full flex items-center justify-center mx-auto animate-pulse">
-              <Zap className="w-10 h-10 text-white" />
-            </div>
-          </div>
-          
-          <h1 className="text-6xl md:text-8xl font-extrabold mb-8 leading-tight">
-            <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-orange-400 bg-clip-text text-transparent animate-pulse">
-              AI-Powered
-            </span>
-            <br />
-            <span className="text-white transform hover:scale-105 transition-transform duration-300 inline-block">
-              Product Discovery
-            </span>
+          {/* Main Heading */}
+          <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-white via-purple-200 to-teal-200 bg-clip-text text-transparent">
+            Find Your Perfect Product
           </h1>
-          
-          <p className="text-xl md:text-2xl text-gray-300 mb-12 max-w-4xl mx-auto leading-relaxed">
-            Revolutionary real-time recommendation system that eliminates static databases, 
-            leveraging <span className="text-purple-400 font-semibold">Google Search API</span>, 
-            <span className="text-pink-400 font-semibold"> OpenAI</span>, and 
-            <span className="text-orange-400 font-semibold"> advanced NLP</span> for intelligent product discovery
+          <p className="text-xl text-gray-300 mb-12 max-w-3xl mx-auto">
+            AI-powered product discovery with real-time price comparison across multiple platforms
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-16">
-            <button className="group relative bg-gradient-to-r from-purple-600 to-pink-600 px-8 py-4 rounded-full text-lg font-semibold hover:from-purple-700 hover:to-pink-700 transform hover:scale-105 transition-all duration-300 shadow-2xl hover:shadow-purple-500/25">
-              <span className="flex items-center">
-                <Play className="w-5 h-5 mr-2 group-hover:translate-x-1 transition-transform" />
-                Experience the Demo
-              </span>
-              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 blur group-hover:blur-lg transition-all duration-300 -z-10" />
+          {/* Main Search Bar */}
+          <div className="max-w-4xl mx-auto mb-8">
+            <form onSubmit={handleSearch} className="relative">
+              <div className={`relative bg-black/40 backdrop-blur-md border-2 rounded-2xl p-2 transition-all duration-300 ${
+                isSearchFocused 
+                  ? 'border-purple-500/50 shadow-lg shadow-purple-500/20' 
+                  : 'border-[#374151]/50 hover:border-[#374151]'
+              }`}>
+                <div className="flex items-center space-x-4">
+                  {/* Search Input */}
+                  <div className="flex-1 flex items-center space-x-3">
+                    <Search className="w-6 h-6 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search for products, brands, or categories..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onFocus={() => setIsSearchFocused(true)}
+                      onBlur={() => setIsSearchFocused(false)}
+                      className="flex-1 bg-transparent text-white placeholder-gray-400 outline-none text-lg"
+                    />
+                  </div>
+
+                  {/* Search Actions */}
+                  <div className="flex items-center space-x-2">
+                    {/* Image Upload */}
+                    <label className="p-3 text-gray-400 hover:text-white transition-colors duration-200 cursor-pointer hover:bg-white/10 rounded-xl">
+                      <Upload className="w-5 h-5" />
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="hidden"
+                      />
+                    </label>
+
+                    {/* Voice Search */}
+                    <button
+                      type="button"
+                      onClick={handleVoiceSearch}
+                      className="p-3 text-gray-400 hover:text-white transition-colors duration-200 hover:bg-white/10 rounded-xl"
+                    >
+                      <Mic className="w-5 h-5" />
             </button>
             
-            <button className="group border-2 border-purple-400 px-8 py-4 rounded-full text-lg font-semibold hover:bg-purple-400 hover:text-slate-900 transition-all duration-300 transform hover:scale-105">
-              <span className="flex items-center">
-                Learn More
-                <ChevronRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-              </span>
+                    {/* Search Button */}
+                    <button
+                      type="submit"
+                      className="bg-gradient-to-r from-purple-500 to-teal-500 hover:from-purple-600 hover:to-teal-600 px-6 py-3 rounded-xl transition-all duration-200 transform hover:scale-105 flex items-center space-x-2"
+                    >
+                      <Search className="w-5 h-5" />
+                      <span>Search</span>
             </button>
-          </div>
-        </div>
-
-        {/* Floating feature cards */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-20">
-          {features.map((feature, index) => {
-            const Icon = feature.icon;
-            return (
-              <div
-                key={index}
-                className={`group relative bg-white/10 backdrop-blur-lg rounded-2xl p-6 hover:bg-white/20 transition-all duration-500 transform hover:scale-105 hover:-translate-y-2 ${
-                  currentFeature === index ? 'ring-2 ring-purple-400 bg-white/20' : ''
-                }`}
-                style={{
-                  animationDelay: `${index * 0.2}s`
-                }}
-              >
-                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-purple-500/20 to-pink-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                <div className="relative z-10">
-                  <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mb-4 group-hover:rotate-12 transition-transform duration-300">
-                    <Icon className="w-6 h-6 text-white" />
                   </div>
-                  <h3 className="text-lg font-bold mb-2 text-white">{feature.title}</h3>
-                  <p className="text-gray-300 text-sm leading-relaxed">{feature.desc}</p>
                 </div>
-                <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-purple-600 to-pink-600 opacity-0 group-hover:opacity-20 blur transition-opacity duration-300" />
               </div>
-            );
-          })}
-        </div>
-
-        {/* Interactive demo preview */}
-        <div className="relative bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10 hover:border-purple-400/50 transition-all duration-500 group">
-          <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-purple-500/10 to-pink-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          <div className="relative z-10">
-            <h3 className="text-2xl font-bold mb-6 text-center">Multi-Modal Search Interface</h3>
-            <div className="grid md:grid-cols-3 gap-6">
-              <div className="group/item text-center p-6 rounded-2xl hover:bg-white/10 transition-all duration-300 transform hover:scale-105">
-                <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover/item:rotate-12 transition-transform duration-300">
-                  <Search className="w-8 h-8 text-white" />
-                </div>
-                <h4 className="font-semibold mb-2">Text Search</h4>
-                <p className="text-sm text-gray-400">NLP-powered semantic understanding</p>
+            </form>
               </div>
               
-              <div className="group/item text-center p-6 rounded-2xl hover:bg-white/10 transition-all duration-300 transform hover:scale-105">
-                <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover/item:rotate-12 transition-transform duration-300">
-                  <Upload className="w-8 h-8 text-white" />
-                </div>
-                <h4 className="font-semibold mb-2">Image Upload</h4>
-                <p className="text-sm text-gray-400">AI-driven visual recognition</p>
-              </div>
-              
-              <div className="group/item text-center p-6 rounded-2xl hover:bg-white/10 transition-all duration-300 transform hover:scale-105">
-                <div className="w-16 h-16 bg-gradient-to-r from-pink-500 to-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover/item:rotate-12 transition-transform duration-300">
-                  <Mic className="w-8 h-8 text-white" />
-                </div>
-                <h4 className="font-semibold mb-2">Voice Search</h4>
-                <p className="text-sm text-gray-400">Natural language processing</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Stats section */}
-      <section className="relative z-10 py-20 border-t border-white/10">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid md:grid-cols-4 gap-8">
-            {stats.map((stat, index) => {
-              const Icon = stat.icon;
-              return (
-                <div
-                  key={index}
-                  className="text-center group hover:scale-110 transition-transform duration-300"
-                  style={{ animationDelay: `${index * 0.1}s` }}
-                >
-                  <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:rotate-12 transition-transform duration-300">
-                    <Icon className="w-8 h-8 text-white" />
-                  </div>
-                  <div className="text-4xl font-bold text-white mb-2 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-                    {stat.value}
-                  </div>
-                  <div className="text-gray-400 font-medium">{stat.label}</div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* Features showcase */}
-      <section className="relative z-10 py-32">
-        <div className="max-w-7xl mx-auto px-6">
-          <h2 className="text-5xl font-bold text-center mb-20 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-            Revolutionary Features
-          </h2>
-          
-          <div className="grid md:grid-cols-2 gap-16 items-center">
-            <div className="space-y-8">
-              {[
-                { icon: Brain, title: "AI-Powered Personalization", desc: "Machine learning algorithms analyze user behavior for dynamic, tailored recommendations" },
-                { icon: DollarSign, title: "Real-Time Price Comparison", desc: "Automated price tracking across 50+ e-commerce platforms for the best deals" },
-                { icon: Shield, title: "Sentiment Analysis", desc: "AI processes customer reviews to assess product credibility and quality" },
-                { icon: Filter, title: "Smart Filtering & Sorting", desc: "Advanced filtering by price, ratings, brand, and category with AI assistance" }
-              ].map((item, index) => {
-                const Icon = item.icon;
-                return (
-                  <div
+          {/* Search History */}
+          {searchHistory.length > 0 && (
+            <div className="max-w-4xl mx-auto">
+              <div className="flex items-center justify-center space-x-2 flex-wrap">
+                <span className="text-gray-400 text-sm">Recent searches:</span>
+                {searchHistory.slice(0, 4).map((item, index) => (
+                  <button
                     key={index}
-                    className="flex items-start space-x-4 group hover:translate-x-4 transition-transform duration-300"
+                    onClick={() => setSearchQuery(item)}
+                    className="px-3 py-1 bg-white/10 hover:bg-white/20 rounded-full text-sm text-gray-300 hover:text-white transition-all duration-200"
                   >
-                    <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:rotate-12 transition-transform duration-300">
-                      <Icon className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold mb-2 text-white">{item.title}</h3>
-                      <p className="text-gray-300 leading-relaxed">{item.desc}</p>
-                    </div>
+                    {item}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Quick Filters */}
+        <div className="max-w-4xl mx-auto mb-16">
+          <div className="flex items-center justify-center space-x-4 flex-wrap">
+            <span className="text-gray-400 text-sm">Popular categories:</span>
+            {['Electronics', 'Fashion', 'Home & Garden', 'Sports', 'Books', 'Beauty'].map((category, index) => (
+              <button
+                  key={index}
+                className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm text-gray-300 hover:text-white transition-all duration-200 transform hover:scale-105"
+              >
+                {category}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Featured Products Section */}
+      <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-32">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-bold mb-4 bg-gradient-to-r from-purple-400 to-teal-400 bg-clip-text text-transparent">
+            AI-Powered Recommendations
+          </h2>
+          <p className="text-gray-300 max-w-2xl mx-auto">
+            Discover products tailored to your preferences with our advanced AI recommendation engine
+          </p>
+        </div>
+
+        {/* Products Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {featuredProducts.map((product, index) => (
+                  <div
+              key={product.id}
+              className="group bg-black/40 backdrop-blur-md border border-[#374151]/50 rounded-xl p-4 hover:border-purple-500/50 transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-purple-500/10"
+              style={{
+                animationDelay: `${index * 100}ms`
+              }}
+            >
+              {/* Product Image */}
+              <div className="relative mb-4">
+                <img
+                  src={product.image}
+                  alt={product.name}
+                  className="w-full h-48 object-cover rounded-lg"
+                />
+                {product.isAIRecommended && (
+                  <div className="absolute top-2 left-2 bg-gradient-to-r from-purple-500 to-teal-500 px-2 py-1 rounded-full text-xs font-medium">
+                    AI Recommended
                   </div>
-                );
-              })}
+                )}
+                <button className="absolute top-2 right-2 p-2 bg-black/50 hover:bg-black/70 rounded-full text-gray-300 hover:text-red-400 transition-all duration-200 opacity-0 group-hover:opacity-100">
+                  <Heart className="w-4 h-4" />
+                </button>
             </div>
             
-            <div className="relative">
-              <div className="w-full h-96 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-3xl backdrop-blur-xl border border-white/10 flex items-center justify-center group hover:scale-105 transition-transform duration-500">
-                <div className="text-center">
-                  <div className="w-24 h-24 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
-                    <Play className="w-12 h-12 text-white" />
+              {/* Product Info */}
+              <div className="space-y-2">
+                <h3 className="font-semibold text-white group-hover:text-purple-300 transition-colors duration-200">
+                  {product.name}
+                </h3>
+                
+                {/* Rating */}
+                <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-1">
+                    {[...Array(5)].map((_, i) => (
+                      <Star
+                        key={i}
+                        className={`w-4 h-4 ${
+                          i < Math.floor(product.rating)
+                            ? 'text-yellow-400 fill-current'
+                            : 'text-gray-600'
+                        }`}
+                      />
+                    ))}
                   </div>
-                  <p className="text-lg text-gray-300">Interactive Demo Coming Soon</p>
+                  <span className="text-sm text-gray-400">
+                    {product.rating} ({product.reviews})
+                  </span>
+                </div>
+
+                {/* Price */}
+                <div className="flex items-center space-x-2">
+                  <span className="text-lg font-bold text-white">${product.price}</span>
+                  {product.originalPrice > product.price && (
+                    <span className="text-sm text-gray-400 line-through">
+                      ${product.originalPrice}
+                    </span>
+                  )}
+                </div>
+
+                {/* Platform */}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-400">{product.platform}</span>
+                  <button className="bg-gradient-to-r from-purple-500 to-teal-500 hover:from-purple-600 hover:to-teal-600 px-3 py-1 rounded-lg text-sm transition-all duration-200 transform hover:scale-105">
+                    View Deal
+                  </button>
                 </div>
               </div>
-              <div className="absolute -inset-4 bg-gradient-to-r from-purple-600 to-pink-600 rounded-3xl opacity-20 blur-xl group-hover:opacity-30 transition-opacity duration-500" />
             </div>
-          </div>
+          ))}
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="relative z-10 py-20 text-center">
-        <div className="max-w-4xl mx-auto px-6">
-          <h2 className="text-4xl md:text-6xl font-bold mb-8 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-            Ready to Transform Product Discovery?
+      {/* Features Section */}
+      <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-32">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl font-bold mb-4 bg-gradient-to-r from-purple-400 to-teal-400 bg-clip-text text-transparent">
+            Why Choose FindONE?
           </h2>
-          <p className="text-xl text-gray-300 mb-12 leading-relaxed">
-            Experience the future of AI-powered recommendations with real-time data, 
-            intelligent analysis, and personalized insights.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-6 justify-center">
-            <button className="group relative bg-gradient-to-r from-purple-600 to-pink-600 px-10 py-5 rounded-full text-xl font-bold hover:from-purple-700 hover:to-pink-700 transform hover:scale-105 transition-all duration-300 shadow-2xl hover:shadow-purple-500/25">
-              <span className="flex items-center justify-center">
-                Get Started Now
-                <ChevronRight className="w-6 h-6 ml-2 group-hover:translate-x-2 transition-transform" />
-              </span>
-              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 blur group-hover:blur-lg transition-all duration-300 -z-10" />
-            </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {[
+            {
+              icon: Sparkles,
+              title: 'AI-Powered Search',
+              description: 'Advanced NLP and machine learning for intelligent product discovery'
+            },
+            {
+              icon: TrendingUp,
+              title: 'Real-Time Comparison',
+              description: 'Live price tracking across multiple e-commerce platforms'
+            },
+            {
+              icon: Filter,
+              title: 'Smart Filtering',
+              description: 'Personalized recommendations based on your preferences and behavior'
+            }
+          ].map((feature, index) => (
+            <div
+              key={index}
+              className="bg-black/40 backdrop-blur-md border border-[#374151]/50 rounded-xl p-6 text-center hover:border-purple-500/50 transition-all duration-300 transform hover:scale-105"
+            >
+              <div className="w-16 h-16 bg-gradient-to-r from-purple-500/20 to-teal-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <feature.icon className="w-8 h-8 text-purple-400" />
+              </div>
+              <h3 className="text-xl font-semibold mb-3 text-white">{feature.title}</h3>
+              <p className="text-gray-300">{feature.description}</p>
           </div>
+          ))}
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="relative z-10 border-t border-white/10 py-12">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-              <Brain className="w-5 h-5" />
-            </div>
-            <span className="text-lg font-bold">Find One</span>
-          </div>
-          <p className="text-gray-400">
-            Revolutionizing product discovery through AI-powered intelligence
-          </p>
-        </div>
-      </footer>
+      {/* Authentication Modal */}
+      <AuthModal 
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        initialMode={authMode}
+      />
     </div>
   );
 };
 
-export default AIProductRecommendationLanding; 
+export default Home; 
