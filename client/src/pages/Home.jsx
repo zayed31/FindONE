@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Upload, Mic, Filter, Sparkles, TrendingUp, Star, Heart, ShoppingCart, User, Menu, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import { useSearch } from '../context/SearchContext';
 import AuthModal from '../components/auth/AuthModal';
+import SearchBar from '../components/search/SearchBar';
+import SearchResults from '../components/search/SearchResults';
 
 const Home = () => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState('login');
@@ -14,6 +16,7 @@ const Home = () => {
   ]);
 
   const { user, logout, isAuthenticated } = useAuth();
+  const { results, query } = useSearch();
 
   // Sample featured products for demonstration
   const featuredProducts = [
@@ -63,25 +66,14 @@ const Home = () => {
     }
   ];
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      // TODO: Implement search functionality
-      console.log('Searching for:', searchQuery);
-    }
+  const handleSaveProduct = (product) => {
+    // TODO: Implement save product functionality
+    console.log('Saving product:', product);
   };
 
-  const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      // TODO: Implement image search
-      console.log('Image uploaded:', file);
-    }
-  };
-
-  const handleVoiceSearch = () => {
-    // TODO: Implement voice search
-    console.log('Voice search activated');
+  const handleViewProduct = (product) => {
+    // TODO: Implement view product functionality
+    console.log('Viewing product:', product);
   };
 
   return (
@@ -110,11 +102,11 @@ const Home = () => {
           <div className="flex items-center space-x-2 group">
               <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-teal-500 rounded-lg flex items-center justify-center transform group-hover:rotate-12 transition-transform duration-300">
                 <Sparkles className="w-6 h-6" />
-              </div>
+            </div>
               <span className="text-xl font-bold bg-gradient-to-r from-purple-400 to-teal-400 bg-clip-text text-transparent">
                 FindONE
-              </span>
-            </div>
+            </span>
+          </div>
 
             {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center space-x-8">
@@ -127,7 +119,7 @@ const Home = () => {
               <a href="#contact" className="text-gray-300 hover:text-white transition-colors duration-200">
                 Contact
               </a>
-            </nav>
+        </nav>
 
             {/* User Actions */}
             <div className="flex items-center space-x-4">
@@ -135,10 +127,10 @@ const Home = () => {
                 <div className="flex items-center space-x-3">
                   <button className="p-2 text-gray-300 hover:text-white transition-colors duration-200">
                     <Heart className="w-5 h-5" />
-                  </button>
+            </button>
                   <button className="p-2 text-gray-300 hover:text-white transition-colors duration-200">
                     <ShoppingCart className="w-5 h-5" />
-                  </button>
+            </button>
                   <div className="flex items-center space-x-2 bg-gradient-to-r from-purple-500/20 to-teal-500/20 hover:from-purple-500/30 hover:to-teal-500/30 px-4 py-2 rounded-lg border border-purple-500/30 transition-all duration-200">
                     <User className="w-4 h-4" />
                     <span className="text-sm">{user?.name || 'Profile'}</span>
@@ -170,7 +162,7 @@ const Home = () => {
                   >
                     Sign Up
                   </button>
-          </div>
+                </div>
               )}
 
               {/* Mobile Menu Button */}
@@ -202,243 +194,239 @@ const Home = () => {
         )}
       </header>
 
-      {/* Hero Section with Search */}
-      <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-32">
-        <div className="text-center mb-16">
-          {/* Main Heading */}
-          <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-white via-purple-200 to-teal-200 bg-clip-text text-transparent">
-            Find Your Perfect Product
-          </h1>
-          <p className="text-xl text-gray-300 mb-12 max-w-3xl mx-auto">
-            AI-powered product discovery with real-time price comparison across multiple platforms
-          </p>
+      {/* Main Content */}
+      <main className="relative z-10">
+        {/* Hero Section with Search */}
+        <section className="pt-20 pb-16 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-7xl mx-auto text-center">
+            {/* Hero Title */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8 }}
+              className="mb-12"
+            >
+              <h1 className="text-4xl md:text-6xl font-bold mb-6">
+                <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-teal-400 bg-clip-text text-transparent">
+                  Discover Products
+                </span>
+                <br />
+                <span className="text-white">with AI Intelligence</span>
+              </h1>
+              <p className="text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
+                Find the perfect products using our advanced AI-powered search. 
+                Get personalized recommendations, compare prices, and discover hidden gems.
+              </p>
+            </motion.div>
 
-          {/* Main Search Bar */}
-          <div className="max-w-4xl mx-auto mb-8">
-            <form onSubmit={handleSearch} className="relative">
-              <div className={`relative bg-black/40 backdrop-blur-md border-2 rounded-2xl p-2 transition-all duration-300 ${
-                isSearchFocused 
-                  ? 'border-purple-500/50 shadow-lg shadow-purple-500/20' 
-                  : 'border-[#374151]/50 hover:border-[#374151]'
-              }`}>
-                <div className="flex items-center space-x-4">
-                  {/* Search Input */}
-                  <div className="flex-1 flex items-center space-x-3">
-                    <Search className="w-6 h-6 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Search for products, brands, or categories..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      onFocus={() => setIsSearchFocused(true)}
-                      onBlur={() => setIsSearchFocused(false)}
-                      className="flex-1 bg-transparent text-white placeholder-gray-400 outline-none text-lg"
-                    />
-                  </div>
+            {/* Search Bar */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              className="mb-12"
+            >
+              <SearchBar />
+            </motion.div>
 
-                  {/* Search Actions */}
-                  <div className="flex items-center space-x-2">
-                    {/* Image Upload */}
-                    <label className="p-3 text-gray-400 hover:text-white transition-colors duration-200 cursor-pointer hover:bg-white/10 rounded-xl">
-                      <Upload className="w-5 h-5" />
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="hidden"
-                      />
-                    </label>
+            {/* Quick Filters */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.4 }}
+              className="flex flex-wrap justify-center gap-3 mb-8"
+            >
+              {['Electronics', 'Fashion', 'Home & Garden', 'Sports', 'Books', 'Toys'].map((category, index) => (
+                <motion.button
+                  key={category}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="px-4 py-2 bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-full text-gray-300 hover:bg-gray-700/50 hover:border-purple-500/50 hover:text-white transition-all duration-200 text-sm"
+                >
+                  {category}
+                </motion.button>
+              ))}
+            </motion.div>
+          </div>
+        </section>
 
-                    {/* Voice Search */}
-                    <button
-                      type="button"
-                      onClick={handleVoiceSearch}
-                      className="p-3 text-gray-400 hover:text-white transition-colors duration-200 hover:bg-white/10 rounded-xl"
-                    >
-                      <Mic className="w-5 h-5" />
-            </button>
-            
-                    {/* Search Button */}
-                    <button
-                      type="submit"
-                      className="bg-gradient-to-r from-purple-500 to-teal-500 hover:from-purple-600 hover:to-teal-600 px-6 py-3 rounded-xl transition-all duration-200 transform hover:scale-105 flex items-center space-x-2"
-                    >
-                      <Search className="w-5 h-5" />
-                      <span>Search</span>
-            </button>
-                  </div>
-                </div>
-              </div>
-            </form>
-              </div>
-              
-          {/* Search History */}
-          {searchHistory.length > 0 && (
-            <div className="max-w-4xl mx-auto">
-              <div className="flex items-center justify-center space-x-2 flex-wrap">
-                <span className="text-gray-400 text-sm">Recent searches:</span>
-                {searchHistory.slice(0, 4).map((item, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setSearchQuery(item)}
-                    className="px-3 py-1 bg-white/10 hover:bg-white/20 rounded-full text-sm text-gray-300 hover:text-white transition-all duration-200"
-                  >
-                    {item}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+        {/* Search Results Section */}
+        {results.length > 0 && (
+          <section className="px-4 sm:px-6 lg:px-8 pb-16">
+            <div className="max-w-7xl mx-auto">
+              <SearchResults 
+                onSaveProduct={handleSaveProduct}
+                onViewProduct={handleViewProduct}
+              />
         </div>
+      </section>
+        )}
 
-        {/* Quick Filters */}
-        <div className="max-w-4xl mx-auto mb-16">
-          <div className="flex items-center justify-center space-x-4 flex-wrap">
-            <span className="text-gray-400 text-sm">Popular categories:</span>
-            {['Electronics', 'Fashion', 'Home & Garden', 'Sports', 'Books', 'Beauty'].map((category, index) => (
-              <button
-                  key={index}
-                className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm text-gray-300 hover:text-white transition-all duration-200 transform hover:scale-105"
+        {/* Featured Products Section (when no search results) */}
+        {results.length === 0 && !query && (
+          <section className="px-4 sm:px-6 lg:px-8 pb-16">
+            <div className="max-w-7xl mx-auto">
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.6 }}
+                className="text-center mb-12"
               >
-                {category}
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Featured Products Section */}
-      <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-32">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-4 bg-gradient-to-r from-purple-400 to-teal-400 bg-clip-text text-transparent">
-            AI-Powered Recommendations
+                <h2 className="text-3xl font-bold text-white mb-4">
+                  Featured Products
           </h2>
-          <p className="text-gray-300 max-w-2xl mx-auto">
-            Discover products tailored to your preferences with our advanced AI recommendation engine
-          </p>
-        </div>
+                <p className="text-gray-400 max-w-2xl mx-auto">
+                  Discover trending products handpicked by our AI algorithm
+                </p>
+              </motion.div>
 
-        {/* Products Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {featuredProducts.map((product, index) => (
-                  <div
-              key={product.id}
-              className="group bg-black/40 backdrop-blur-md border border-[#374151]/50 rounded-xl p-4 hover:border-purple-500/50 transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-purple-500/10"
-              style={{
-                animationDelay: `${index * 100}ms`
-              }}
-            >
-              {/* Product Image */}
-              <div className="relative mb-4">
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  className="w-full h-48 object-cover rounded-lg"
-                />
-                {product.isAIRecommended && (
-                  <div className="absolute top-2 left-2 bg-gradient-to-r from-purple-500 to-teal-500 px-2 py-1 rounded-full text-xs font-medium">
-                    AI Recommended
+              {/* Featured Products Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {featuredProducts.map((product, index) => (
+                  <motion.div
+                    key={product.id}
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.8 + index * 0.1 }}
+                    whileHover={{ y: -8 }}
+                    className="group bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl overflow-hidden transition-all duration-300 hover:border-purple-500/30 hover:shadow-xl hover:shadow-purple-500/10"
+                  >
+                    {/* Product Image */}
+                    <div className="relative aspect-square overflow-hidden bg-gray-900">
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                      />
+                      {product.isAIRecommended && (
+                        <div className="absolute top-3 left-3">
+                          <span className="px-2 py-1 bg-gradient-to-r from-purple-500 to-teal-500 text-white text-xs rounded-full backdrop-blur-sm">
+                            AI Recommended
+                          </span>
+                    </div>
+                      )}
+                    </div>
+
+                    {/* Product Info */}
+                    <div className="p-4">
+                      <h3 className="text-white font-medium text-sm mb-2 group-hover:text-purple-300 transition-colors">
+                        {product.name}
+                      </h3>
+                      
+                      {/* Rating */}
+                      <div className="flex items-center space-x-1 mb-2">
+                        <div className="flex">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`w-3 h-3 ${
+                                i < Math.floor(product.rating)
+                                  ? 'fill-yellow-400 text-yellow-400'
+                                  : 'text-gray-500'
+                              }`}
+                            />
+                          ))}
                   </div>
-                )}
-                <button className="absolute top-2 right-2 p-2 bg-black/50 hover:bg-black/70 rounded-full text-gray-300 hover:text-red-400 transition-all duration-200 opacity-0 group-hover:opacity-100">
-                  <Heart className="w-4 h-4" />
-                </button>
+                        <span className="text-gray-400 text-xs">
+                          ({product.rating})
+                        </span>
             </div>
             
-              {/* Product Info */}
-              <div className="space-y-2">
-                <h3 className="font-semibold text-white group-hover:text-purple-300 transition-colors duration-200">
-                  {product.name}
-                </h3>
-                
-                {/* Rating */}
-                <div className="flex items-center space-x-2">
-                  <div className="flex items-center space-x-1">
-                    {[...Array(5)].map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`w-4 h-4 ${
-                          i < Math.floor(product.rating)
-                            ? 'text-yellow-400 fill-current'
-                            : 'text-gray-600'
-                        }`}
-                      />
-                    ))}
+                      {/* Price */}
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <span className="text-purple-400 font-semibold text-sm">
+                            ${product.price}
+                          </span>
+                          {product.originalPrice > product.price && (
+                            <span className="text-gray-500 text-xs line-through ml-2">
+                              ${product.originalPrice}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-gray-500 text-xs">
+                          {product.platform}
+                        </span>
                   </div>
-                  <span className="text-sm text-gray-400">
-                    {product.rating} ({product.reviews})
-                  </span>
+
+                      {/* Reviews */}
+                      <p className="text-gray-400 text-xs">
+                        {product.reviews.toLocaleString()} reviews
+                      </p>
                 </div>
-
-                {/* Price */}
-                <div className="flex items-center space-x-2">
-                  <span className="text-lg font-bold text-white">${product.price}</span>
-                  {product.originalPrice > product.price && (
-                    <span className="text-sm text-gray-400 line-through">
-                      ${product.originalPrice}
-                    </span>
-                  )}
-                </div>
-
-                {/* Platform */}
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-400">{product.platform}</span>
-                  <button className="bg-gradient-to-r from-purple-500 to-teal-500 hover:from-purple-600 hover:to-teal-600 px-3 py-1 rounded-lg text-sm transition-all duration-200 transform hover:scale-105">
-                    View Deal
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-32">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl font-bold mb-4 bg-gradient-to-r from-purple-400 to-teal-400 bg-clip-text text-transparent">
-            Why Choose FindONE?
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {[
-            {
-              icon: Sparkles,
-              title: 'AI-Powered Search',
-              description: 'Advanced NLP and machine learning for intelligent product discovery'
-            },
-            {
-              icon: TrendingUp,
-              title: 'Real-Time Comparison',
-              description: 'Live price tracking across multiple e-commerce platforms'
-            },
-            {
-              icon: Filter,
-              title: 'Smart Filtering',
-              description: 'Personalized recommendations based on your preferences and behavior'
-            }
-          ].map((feature, index) => (
-            <div
-              key={index}
-              className="bg-black/40 backdrop-blur-md border border-[#374151]/50 rounded-xl p-6 text-center hover:border-purple-500/50 transition-all duration-300 transform hover:scale-105"
-            >
-              <div className="w-16 h-16 bg-gradient-to-r from-purple-500/20 to-teal-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <feature.icon className="w-8 h-8 text-purple-400" />
-              </div>
-              <h3 className="text-xl font-semibold mb-3 text-white">{feature.title}</h3>
-              <p className="text-gray-300">{feature.description}</p>
+                  </motion.div>
+                ))}
           </div>
-          ))}
         </div>
       </section>
+        )}
 
-      {/* Authentication Modal */}
-      <AuthModal 
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        initialMode={authMode}
-      />
+        {/* Features Section */}
+        <section id="features" className="px-4 sm:px-6 lg:px-8 py-16">
+          <div className="max-w-7xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8 }}
+              viewport={{ once: true }}
+              className="text-center mb-12"
+            >
+              <h2 className="text-3xl font-bold text-white mb-4">
+                Why Choose FindONE?
+          </h2>
+              <p className="text-gray-400 max-w-2xl mx-auto">
+                Experience the future of product discovery with our cutting-edge features
+              </p>
+            </motion.div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {[
+                {
+                  icon: Sparkles,
+                  title: 'AI-Powered Search',
+                  description: 'Advanced algorithms that understand your preferences and find the perfect products.'
+                },
+                {
+                  icon: TrendingUp,
+                  title: 'Real-time Analysis',
+                  description: 'Get live price comparisons and market trends across multiple platforms.'
+                },
+                {
+                  icon: Heart,
+                  title: 'Personalized Recommendations',
+                  description: 'Discover products tailored to your unique taste and shopping history.'
+                }
+              ].map((feature, index) => (
+                <motion.div
+                  key={feature.title}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: index * 0.2 }}
+                  viewport={{ once: true }}
+                  className="text-center p-6 bg-gray-800/30 backdrop-blur-sm border border-gray-700/50 rounded-xl hover:border-purple-500/30 transition-all duration-300"
+                >
+                  <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-teal-500 rounded-lg flex items-center justify-center mx-auto mb-4">
+                    <feature.icon className="w-6 h-6 text-white" />
+          </div>
+                  <h3 className="text-white font-semibold mb-2">{feature.title}</h3>
+                  <p className="text-gray-400 text-sm">{feature.description}</p>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+      </main>
+
+      {/* Auth Modal */}
+      <AnimatePresence>
+        {showAuthModal && (
+          <AuthModal
+            mode={authMode}
+            onClose={() => setShowAuthModal(false)}
+            onSwitchMode={(newMode) => setAuthMode(newMode)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };
