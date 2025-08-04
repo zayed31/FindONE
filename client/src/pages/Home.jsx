@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Upload, Mic, Filter, Sparkles, TrendingUp, Star, Heart, ShoppingCart, User, Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSearch } from '../context/SearchContext';
 import AuthModal from '../components/auth/AuthModal';
@@ -15,8 +16,9 @@ const Home = () => {
     'iPhone 15 Pro', 'MacBook Air M2', 'Sony WH-1000XM5', 'Nike Air Max'
   ]);
 
+  const navigate = useNavigate();
   const { user, logout, isAuthenticated } = useAuth();
-  const { results, query } = useSearch();
+  const { results, query, clearSearch } = useSearch();
 
   // Sample featured products for demonstration
   const featuredProducts = [
@@ -76,6 +78,12 @@ const Home = () => {
     console.log('Viewing product:', product);
   };
 
+  const handleHomeNavigation = () => {
+    clearSearch();
+    // Scroll to top of the page
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0d1117] via-[#1a1a1a] to-[#262626] text-white overflow-hidden">
       {/* Animated background particles */}
@@ -99,17 +107,29 @@ const Home = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-          <div className="flex items-center space-x-2 group">
+            <Link 
+              to="/" 
+              onClick={handleHomeNavigation}
+              className="flex items-center space-x-2 group cursor-pointer hover:scale-105 transition-transform duration-200"
+              title="Go to Home"
+            >
               <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-teal-500 rounded-lg flex items-center justify-center transform group-hover:rotate-12 transition-transform duration-300">
                 <Sparkles className="w-6 h-6" />
-            </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-purple-400 to-teal-400 bg-clip-text text-transparent">
+              </div>
+              <span className="text-xl font-bold bg-gradient-to-r from-purple-400 to-teal-400 bg-clip-text text-transparent group-hover:from-purple-300 group-hover:to-teal-300 transition-all duration-200">
                 FindONE
-            </span>
-          </div>
+              </span>
+            </Link>
 
             {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center space-x-8">
+              <Link 
+                to="/" 
+                onClick={handleHomeNavigation}
+                className="text-gray-300 hover:text-white transition-colors duration-200"
+              >
+                Home
+              </Link>
               <a href="#features" className="text-gray-300 hover:text-white transition-colors duration-200">
                 Features
               </a>
@@ -119,7 +139,7 @@ const Home = () => {
               <a href="#contact" className="text-gray-300 hover:text-white transition-colors duration-200">
                 Contact
               </a>
-        </nav>
+            </nav>
 
             {/* User Actions */}
             <div className="flex items-center space-x-4">
@@ -180,6 +200,16 @@ const Home = () => {
         {isMenuOpen && (
           <div className="md:hidden absolute top-full left-0 right-0 bg-black/90 backdrop-blur-md border-b border-[#374151]/50">
             <div className="px-4 py-4 space-y-4">
+              <Link 
+                to="/" 
+                onClick={() => {
+                  handleHomeNavigation();
+                  setIsMenuOpen(false);
+                }}
+                className="block text-gray-300 hover:text-white transition-colors duration-200"
+              >
+                Home
+              </Link>
               <a href="#features" className="block text-gray-300 hover:text-white transition-colors duration-200">
                 Features
               </a>
@@ -421,9 +451,9 @@ const Home = () => {
       <AnimatePresence>
         {showAuthModal && (
           <AuthModal
-            mode={authMode}
+            isOpen={showAuthModal}
             onClose={() => setShowAuthModal(false)}
-            onSwitchMode={(newMode) => setAuthMode(newMode)}
+            initialMode={authMode}
           />
         )}
       </AnimatePresence>

@@ -7,6 +7,15 @@ const ProductCard = ({ product, onSave, onView }) => {
   const [imageError, setImageError] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
 
+  // Debug logging
+  console.log('ProductCard received product:', {
+    title: product.title,
+    price: product.price,
+    url: product.url,
+    buy_url: product.buy_url,
+    domain: product.domain
+  });
+
   const handleImageLoad = () => {
     console.log('Image loaded successfully:', product.image);
     setImageLoaded(true);
@@ -29,7 +38,31 @@ const ProductCard = ({ product, onSave, onView }) => {
 
   const formatPrice = (price) => {
     if (!price) return 'Price not available';
-    return price;
+    
+    // If price is already formatted with ₹ symbol, return as is
+    if (typeof price === 'string' && price.includes('₹')) {
+      return price;
+    }
+    
+    // Try to parse and format the price
+    try {
+      // Remove currency symbols and extract numeric value
+      const cleanPrice = price.toString()
+        .replace(/[₹RsINR\s]/g, '') // Remove currency symbols
+        .replace(/[^\d.,]/g, ''); // Keep only digits, commas, and decimal points
+      
+      const numericPrice = parseFloat(cleanPrice.replace(/,/g, ''));
+      
+      if (!isNaN(numericPrice) && numericPrice > 0) {
+        // Format as Indian currency with proper comma separation
+        return `₹${numericPrice.toLocaleString('en-IN')}`;
+      }
+    } catch (error) {
+      console.error('Error formatting price:', error);
+    }
+    
+    // Fallback: return original price if parsing fails
+    return price.toString();
   };
 
   const formatRating = (rating) => {
@@ -187,12 +220,18 @@ const ProductCard = ({ product, onSave, onView }) => {
 
           {/* External Link */}
           <motion.a
-            href={product.url}
+            href={product.url || product.buy_url}
             target="_blank"
             rel="noopener noreferrer"
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             className="p-2 rounded-full bg-gray-700/50 text-gray-400 hover:bg-purple-500/50 hover:text-white transition-colors"
+            onClick={(e) => {
+              if (!product.url && !product.buy_url) {
+                e.preventDefault();
+                console.warn('No URL available for product:', product.title);
+              }
+            }}
           >
             <ExternalLink className="w-4 h-4" />
           </motion.a>

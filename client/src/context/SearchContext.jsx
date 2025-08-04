@@ -46,6 +46,12 @@ const searchReducer = (state, action) => {
     case 'CLEAR_SUGGESTIONS':
       return { ...state, suggestions: [] };
     
+    case 'UPDATE_CHARACTER_SETTINGS':
+      return { 
+        ...state, 
+        characterSettings: { ...state.characterSettings, ...action.payload } 
+      };
+    
     default:
       return state;
   }
@@ -66,7 +72,12 @@ const initialState = {
   searchInfo: null,
   loading: false,
   suggestionsLoading: false,
-  error: null
+  error: null,
+  characterSettings: {
+    enabled: true,
+    frequency: 'normal', // low, normal, high
+    reactions: true
+  }
 };
 
 // Create context
@@ -113,6 +124,7 @@ export const SearchProvider = ({ children }) => {
 
       if (data.success) {
         console.log('✅ Search successful, products found:', data.data?.products?.length || 0);
+        console.log('📋 Sample product data:', data.data?.products?.[0]);
         dispatch({ type: 'SET_RESULTS', payload: data.data });
       } else {
         console.error('❌ Search failed:', data.message);
@@ -184,6 +196,11 @@ export const SearchProvider = ({ children }) => {
     }
   };
 
+  // Update character settings
+  const updateCharacterSettings = (settings) => {
+    dispatch({ type: 'UPDATE_CHARACTER_SETTINGS', payload: settings });
+  };
+
   const value = {
     ...state,
     searchProducts,
@@ -192,7 +209,8 @@ export const SearchProvider = ({ children }) => {
     setFilters,
     clearSearch,
     loadMore,
-    fetchTrendingSearches
+    fetchTrendingSearches,
+    updateCharacterSettings
   };
 
   return (

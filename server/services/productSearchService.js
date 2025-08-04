@@ -1,6 +1,10 @@
 import axios from 'axios';
 import { extractDomain } from '../utils/helpers.js';
 import GoogleShoppingService from './googleShoppingService.js';
+import MLClassificationService from './mlClassificationService.js';
+import HierarchicalRetrievalService from './hierarchicalRetrievalService.js';
+import SemanticMatchingService from './semanticMatchingService.js';
+import AdvancedFilteringService from './advancedFilteringService.js';
 
 // Configuration
 const CONFIG = {
@@ -19,53 +23,426 @@ const searchCache = new Map();
  */
 class QueryUnderstandingLayer {
   constructor() {
+    // Initialize ML Classification Service
+    this.mlClassifier = new MLClassificationService();
+    // Enhanced product categories with detailed mappings
+    this.productCategories = {
+      'mobile_phones': {
+        keywords: ['smartphone', 'phone', 'mobile', 'cell', 'galaxy', 'iphone', 'pixel', 'oneplus', 'xiaomi', 'oppo', 'vivo'],
+        brands: ['samsung', 'apple', 'google', 'oneplus', 'xiaomi', 'oppo', 'vivo', 'realme', 'nokia', 'motorola'],
+        models: {
+          'samsung': ['galaxy s', 'galaxy note', 'galaxy a', 'galaxy m', 'galaxy z'],
+          'apple': ['iphone', 'ipad'],
+          'google': ['pixel'],
+          'oneplus': ['oneplus'],
+          'xiaomi': ['mi', 'redmi', 'poco'],
+          'oppo': ['find x', 'reno', 'a series'],
+          'vivo': ['x series', 'v series', 'y series']
+        }
+      },
+      'home_appliances': {
+        keywords: ['washing machine', 'refrigerator', 'microwave', 'dishwasher', 'dryer', 'oven', 'stove', 'ac', 'air conditioner'],
+        brands: ['samsung', 'lg', 'whirlpool', 'bosch', 'haier', 'godrej', 'voltas'],
+        models: {
+          'samsung': ['ecobubble', 'addwash', 'quickdrive'],
+          'lg': ['twinwash', 'inverter', 'side by side'],
+          'whirlpool': ['intellisense', 'steam care']
+        }
+      },
+      'electronics': {
+        keywords: ['tv', 'television', 'monitor', 'speaker', 'headphones', 'earbuds', 'camera', 'gaming'],
+        brands: ['samsung', 'lg', 'sony', 'bose', 'jbl', 'canon', 'nikon'],
+        models: {
+          'samsung': ['qled', 'oled', 'crystal uhd'],
+          'lg': ['oled', 'nano cell', 'webos'],
+          'sony': ['bravia', 'xperia']
+        }
+      },
+      'computers': {
+        keywords: ['laptop', 'desktop', 'tablet', 'computer', 'pc', 'macbook', 'chromebook'],
+        brands: ['apple', 'dell', 'hp', 'lenovo', 'asus', 'acer', 'samsung'],
+        models: {
+          'apple': ['macbook air', 'macbook pro', 'imac', 'mac mini'],
+          'dell': ['inspiron', 'xps', 'latitude', 'precision'],
+          'hp': ['pavilion', 'envy', 'spectre', 'omen']
+        }
+      }
+    };
+
+    // Enhanced synonyms with category-specific mappings
     this.synonyms = {
-      'cell-phone': ['mobile phone', 'smartphone', 'phone'],
-      'mobile': ['cell phone', 'smartphone', 'phone'],
-      'laptop': ['notebook', 'computer'],
-      'headphones': ['earphones', 'earbuds', 'headset'],
-      'tv': ['television', 'smart tv'],
-      'tablet': ['ipad', 'android tablet'],
-      'watch': ['smartwatch', 'fitness tracker']
+      'cell-phone': ['mobile phone', 'smartphone', 'phone', 'handset'],
+      'mobile': ['cell phone', 'smartphone', 'phone', 'handset'],
+      'laptop': ['notebook', 'computer', 'portable computer'],
+      'headphones': ['earphones', 'earbuds', 'headset', 'audio device'],
+      'tv': ['television', 'smart tv', 'led tv', 'oled tv'],
+      'tablet': ['ipad', 'android tablet', 'slate'],
+      'watch': ['smartwatch', 'fitness tracker', 'wearable'],
+      'washing machine': ['washer', 'laundry machine', 'washing machine'],
+      'refrigerator': ['fridge', 'refrigerator', 'cooler'],
+      'microwave': ['microwave oven', 'microwave'],
+      'dishwasher': ['dish washer', 'dishwashing machine']
     };
     
+    // Enhanced brand mappings with model patterns
     this.brands = {
-      'apple': ['iphone', 'ipad', 'macbook', 'airpods'],
-      'samsung': ['galaxy', 'note', 's series'],
-      'google': ['pixel'],
-      'oneplus': ['one plus'],
-      'xiaomi': ['mi', 'redmi', 'poco'],
-      'oppo': ['find x', 'reno'],
-      'vivo': ['x series', 'v series']
+      'apple': ['iphone', 'ipad', 'macbook', 'airpods', 'apple watch', 'imac', 'mac mini'],
+      'samsung': ['galaxy', 'note', 's series', 'a series', 'm series', 'z series', 'qled', 'oled'],
+      'google': ['pixel', 'chromebook', 'nest'],
+      'oneplus': ['one plus', 'oneplus'],
+      'xiaomi': ['mi', 'redmi', 'poco', 'xiaomi'],
+      'oppo': ['find x', 'reno', 'a series', 'oppo'],
+      'vivo': ['x series', 'v series', 'y series', 'vivo'],
+      'lg': ['lg', 'life is good'],
+      'sony': ['sony', 'bravia', 'xperia'],
+      'dell': ['dell', 'inspiron', 'xps', 'latitude'],
+      'hp': ['hp', 'hewlett packard', 'pavilion', 'envy', 'spectre']
+    };
+
+    // Common misspellings and variations
+    this.misspellings = {
+      'samsung': ['samsun', 'samsu', 'samsng'],
+      'iphone': ['iphne', 'iphon', 'iphne'],
+      'galaxy': ['galxy', 'galax', 'galaxi'],
+      'oneplus': ['one plus', 'one+', 'one plus'],
+      'xiaomi': ['xiaomi', 'xiaomi', 'xiaomi'],
+      'oppo': ['oppo', 'oppo', 'oppo'],
+      'vivo': ['vivo', 'vivo', 'vivo']
+    };
+
+    // Intent classification patterns
+    this.intentPatterns = {
+      'specific_model': [
+        /\b[a-z]+\s+[a-z]?\d+\b/i,  // Samsung S25, iPhone 15
+        /\b[a-z]+\s+[a-z]+\s+\d+\b/i,  // Samsung Galaxy S25
+        /\b\d+\s*[a-z]+\b/i  // 15 Pro, S25 Ultra
+      ],
+      'brand_exploration': [
+        /\b[a-z]+\b/i  // Just brand name
+      ],
+      'category_browsing': [
+        /\b(phone|smartphone|mobile|laptop|tv|refrigerator)\b/i
+      ],
+      'comparison': [
+        /\bvs\b|\bversus\b|\bcompare\b|\bcomparison\b/i
+      ]
     };
   }
 
-  preprocessQuery(query) {
+  async preprocessQuery(query) {
+    console.log('🔍 Stage 1: Advanced Query Understanding for:', query);
+    
     let processedQuery = query.trim().toLowerCase();
     
-    // 1. Spell-check & plural/lemma handling
+    // 1. Spell correction and normalization
+    processedQuery = this.correctSpelling(processedQuery);
+    console.log('   ✅ Spell correction:', processedQuery);
+    
+    // 2. Intent classification
+    const intent = this.classifyIntent(processedQuery);
+    console.log('   🎯 Intent classified as:', intent.type, `(confidence: ${intent.confidence})`);
+    
+    // 3. Advanced attribute extraction
+    const attributes = this.extractAdvancedAttributes(processedQuery);
+    console.log('   📋 Extracted attributes:', attributes);
+    
+    // 4. ML-Powered Category classification (Stage 2)
+    const mlCategory = await this.mlClassifier.classifyProduct(processedQuery, attributes, intent);
+    console.log('   🤖 ML Category classified as:', mlCategory.primary.category, `(confidence: ${mlCategory.primary.confidence})`);
+    
+    // Use ML classification result, fallback to rule-based if needed
+    const category = {
+      primary: mlCategory.primary.category,
+      confidence: mlCategory.primary.confidence,
+      alternatives: mlCategory.alternatives.map(alt => ({
+        category: alt.category,
+        confidence: alt.confidence,
+        reason: alt.reasons?.[0] || 'ML classification'
+      })),
+      mlResult: mlCategory
+    };
+    
+    // 5. Handle plurals and lemmatization
     processedQuery = this.handlePlurals(processedQuery);
     
-    // 2. Parse product attributes FIRST (before synonym expansion)
-    const attributes = this.parseProductAttributes(processedQuery);
+    // 6. Create optimized queries for different search strategies
+    const exactMatchQuery = this.createExactMatchQuery(processedQuery, attributes, category);
+    const expandedQuery = this.expandSynonyms(processedQuery, category);
+    const categorySpecificQuery = this.createCategorySpecificQuery(processedQuery, category, attributes);
     
-    // 3. Create exact match query (for precise searching)
-    const exactMatchQuery = this.createExactMatchQuery(processedQuery, attributes);
-    
-    // 4. Synonym & alias expansion (for broader matching)
-    const expandedQuery = this.expandSynonyms(processedQuery);
-    
-    return {
+    const result = {
       original: query,
       processed: processedQuery,
       exactMatch: exactMatchQuery,
       expanded: expandedQuery,
-      attributes
+      categorySpecific: categorySpecificQuery,
+      attributes,
+      intent,
+      category,
+      confidence: this.calculateQueryConfidence(attributes, intent, category)
+    };
+    
+    console.log('   📊 Query confidence score:', result.confidence);
+    console.log('   ✅ Stage 1 completed successfully');
+    
+    return result;
+  }
+
+  correctSpelling(query) {
+    let corrected = query;
+    
+    // Correct common misspellings
+    for (const [correct, misspellings] of Object.entries(this.misspellings)) {
+      for (const misspelling of misspellings) {
+        const regex = new RegExp(`\\b${misspelling}\\b`, 'gi');
+        corrected = corrected.replace(regex, correct);
+      }
+    }
+    
+    // Common word corrections
+    const wordCorrections = {
+      'samsun': 'samsung',
+      'iphne': 'iphone',
+      'galxy': 'galaxy',
+      'one plus': 'oneplus',
+      'washing machine': 'washing machine',
+      'refrigerator': 'refrigerator'
+    };
+    
+    for (const [wrong, right] of Object.entries(wordCorrections)) {
+      const regex = new RegExp(`\\b${wrong}\\b`, 'gi');
+      corrected = corrected.replace(regex, right);
+    }
+    
+    return corrected;
+  }
+
+  classifyIntent(query) {
+    let maxConfidence = 0;
+    let detectedIntent = 'general';
+    
+    // Check for specific model intent (highest priority)
+    for (const pattern of this.intentPatterns.specific_model) {
+      if (pattern.test(query)) {
+        return { type: 'specific_model', confidence: 0.95 };
+      }
+    }
+    
+    // Check for comparison intent
+    for (const pattern of this.intentPatterns.comparison) {
+      if (pattern.test(query)) {
+        return { type: 'comparison', confidence: 0.9 };
+      }
+    }
+    
+    // Check for category browsing
+    for (const pattern of this.intentPatterns.category_browsing) {
+      if (pattern.test(query)) {
+        return { type: 'category_browsing', confidence: 0.8 };
+      }
+    }
+    
+    // Check for brand exploration
+    for (const pattern of this.intentPatterns.brand_exploration) {
+      if (pattern.test(query)) {
+        return { type: 'brand_exploration', confidence: 0.7 };
+      }
+    }
+    
+    return { type: 'general', confidence: 0.5 };
+  }
+
+  extractAdvancedAttributes(query) {
+    const attributes = {
+      brand: null,
+      model: null,
+      series: null,
+      size: null,
+      color: null,
+      storage: null,
+      variant: null,
+      year: null
+    };
+    
+    // Enhanced brand extraction with confidence scoring
+    for (const [brand, aliases] of Object.entries(this.brands)) {
+      for (const alias of aliases) {
+        if (query.includes(alias.toLowerCase())) {
+          attributes.brand = brand;
+          break;
+        }
+      }
+      if (attributes.brand) break;
+    }
+    
+    // Advanced model extraction patterns
+    const modelPatterns = [
+      // Samsung Galaxy S25, iPhone 15 Pro
+      /(\w+)\s+(\w+)\s+([a-z]?\d+)(?:\s+(\w+))?/i,
+      // Samsung S25, iPhone 15
+      /(\w+)\s+([a-z]?\d+)(?:\s+(\w+))?/i,
+      // S25, 15 Pro, S24 FE
+      /([a-z]?\d+)(?:\s+(\w+))?/i
+    ];
+    
+    for (const pattern of modelPatterns) {
+      const match = query.match(pattern);
+      if (match) {
+        if (match[1] && match[2] && match[3]) {
+          // Full pattern: Samsung Galaxy S25
+          attributes.brand = attributes.brand || match[1];
+          attributes.series = match[2];
+          attributes.model = match[3];
+          attributes.variant = match[4] || null;
+        } else if (match[1] && match[2]) {
+          // Medium pattern: Samsung S25
+          attributes.brand = attributes.brand || match[1];
+          attributes.model = match[2];
+          attributes.variant = match[3] || null;
+        } else if (match[1]) {
+          // Short pattern: S25
+          attributes.model = match[1];
+          attributes.variant = match[2] || null;
+        }
+        break;
+      }
+    }
+    
+         // Special handling for S24 FE pattern
+     const s24feMatch = query.match(/(\w+)\s+(\d+)\s+(\w+)/i);
+     if (s24feMatch && s24feMatch[3].toLowerCase() === 'fe') {
+       attributes.brand = attributes.brand || s24feMatch[1];
+       attributes.series = s24feMatch[2];
+       attributes.model = s24feMatch[3];
+     }
+     
+     // Special handling for A series pattern (A15, A73, etc.)
+     const aSeriesMatch = query.match(/(\w+)\s+(a\d+)/i);
+     if (aSeriesMatch) {
+       attributes.brand = attributes.brand || aSeriesMatch[1];
+       attributes.model = aSeriesMatch[2];
+     }
+    
+    // Extract storage sizes with more patterns
+    const storagePatterns = [
+      /(\d+)\s*(gb|tb|mb)/i,
+      /(\d+)\s*(gigabyte|terabyte|megabyte)/i
+    ];
+    
+    for (const pattern of storagePatterns) {
+      const match = query.match(pattern);
+      if (match) {
+        attributes.storage = `${match[1]}${match[2].toUpperCase()}`;
+        break;
+      }
+    }
+    
+    // Extract colors with expanded list
+    const colors = [
+      'black', 'white', 'blue', 'red', 'green', 'yellow', 'pink', 'purple', 
+      'gold', 'silver', 'gray', 'grey', 'brown', 'orange', 'navy', 'maroon',
+      'cream', 'beige', 'transparent', 'clear'
+    ];
+    
+    for (const color of colors) {
+      if (query.includes(color)) {
+        attributes.color = color;
+        break;
+      }
+    }
+    
+    // Extract year
+    const yearMatch = query.match(/\b(20\d{2})\b/);
+    if (yearMatch) {
+      attributes.year = yearMatch[1];
+    }
+    
+    return attributes;
+  }
+
+  classifyProductCategory(query, attributes) {
+    let maxScore = 0;
+    let bestCategory = 'electronics';
+    let confidence = 0.5;
+    
+    for (const [category, categoryInfo] of Object.entries(this.productCategories)) {
+      let score = 0;
+      
+      // Check brand match
+      if (attributes.brand && categoryInfo.brands.includes(attributes.brand)) {
+        score += 0.4;
+      }
+      
+      // Check model series match
+      if (attributes.series && categoryInfo.models[attributes.brand]) {
+        for (const modelSeries of categoryInfo.models[attributes.brand]) {
+          if (attributes.series.toLowerCase().includes(modelSeries.toLowerCase())) {
+            score += 0.3;
+            break;
+          }
+        }
+      }
+      
+      // Check keyword match
+      for (const keyword of categoryInfo.keywords) {
+        if (query.includes(keyword)) {
+          score += 0.2;
+          break;
+        }
+      }
+      
+      // Check model number patterns
+      if (attributes.model) {
+        const modelNum = attributes.model.match(/\d+/);
+        if (modelNum) {
+          const num = parseInt(modelNum[0]);
+          
+          // Samsung Galaxy S series (S1-S25) are phones
+          if (attributes.brand === 'samsung' && attributes.series === 'galaxy' && 
+              attributes.model.toLowerCase().startsWith('s') && num >= 1 && num <= 25) {
+            score += 0.5;
+          }
+          
+          // iPhone series (1-15) are phones
+          if (attributes.brand === 'apple' && attributes.model.toLowerCase().includes('iphone') && 
+              num >= 1 && num <= 15) {
+            score += 0.5;
+          }
+        }
+      }
+      
+      if (score > maxScore) {
+        maxScore = score;
+        bestCategory = category;
+        confidence = Math.min(score, 0.95);
+      }
+    }
+    
+    return {
+      primary: bestCategory,
+      confidence: confidence,
+      alternatives: this.getAlternativeCategories(query, attributes)
     };
   }
 
+  getAlternativeCategories(query, attributes) {
+    const alternatives = [];
+    
+    for (const [category, categoryInfo] of Object.entries(this.productCategories)) {
+      if (categoryInfo.brands.includes(attributes.brand)) {
+        alternatives.push({
+          category,
+          confidence: 0.3,
+          reason: 'brand_match'
+        });
+      }
+    }
+    
+    return alternatives.slice(0, 3); // Return top 3 alternatives
+  }
+
   handlePlurals(query) {
-    // Basic plural to singular conversion
+    // Enhanced plural to singular conversion
     const pluralToSingular = {
       'phones': 'phone',
       'laptops': 'laptop',
@@ -73,7 +450,14 @@ class QueryUnderstandingLayer {
       'watches': 'watch',
       'tablets': 'tablet',
       'cameras': 'camera',
-      'speakers': 'speaker'
+      'speakers': 'speaker',
+      'washing machines': 'washing machine',
+      'refrigerators': 'refrigerator',
+      'microwaves': 'microwave',
+      'dishwashers': 'dishwasher',
+      'televisions': 'television',
+      'computers': 'computer',
+      'monitors': 'monitor'
     };
     
     let processed = query;
@@ -84,17 +468,26 @@ class QueryUnderstandingLayer {
     return processed;
   }
 
-  expandSynonyms(query) {
+  expandSynonyms(query, category) {
     let expanded = query;
     
-    // Expand synonyms
+    // Category-specific synonym expansion
+    if (category && category.primary) {
+      const categoryInfo = this.productCategories[category.primary];
+      if (categoryInfo) {
+        // Add category-specific keywords
+        expanded += ' ' + categoryInfo.keywords.join(' ');
+      }
+    }
+    
+    // General synonym expansion
     for (const [term, synonyms] of Object.entries(this.synonyms)) {
       if (expanded.includes(term)) {
         expanded += ' ' + synonyms.join(' ');
       }
     }
     
-    // Expand brand aliases
+    // Brand alias expansion
     for (const [brand, aliases] of Object.entries(this.brands)) {
       if (expanded.includes(brand)) {
         expanded += ' ' + aliases.join(' ');
@@ -104,51 +497,81 @@ class QueryUnderstandingLayer {
     return expanded;
   }
 
-  parseProductAttributes(query) {
-    const attributes = {
-      brand: null,
-      model: null,
-      size: null,
-      color: null,
-      storage: null
-    };
+  createCategorySpecificQuery(query, category, attributes) {
+    let categoryQuery = query;
     
-    // Extract brand
-    const brands = Object.keys(this.brands);
-    for (const brand of brands) {
-      if (query.includes(brand)) {
-        attributes.brand = brand;
-        break;
+    if (category && category.primary) {
+      const categoryInfo = this.productCategories[category.primary];
+      
+      // Add category-specific terms
+      if (categoryInfo) {
+        categoryQuery += ' ' + categoryInfo.keywords.slice(0, 3).join(' ');
+      }
+      
+      // Add brand-specific model terms
+      if (attributes.brand && categoryInfo.models[attributes.brand]) {
+        categoryQuery += ' ' + categoryInfo.models[attributes.brand].slice(0, 2).join(' ');
       }
     }
     
-    // Extract model numbers (iPhone 15, Galaxy S23, etc.)
-    const modelRegex = /(\w+)\s+(\d+)/i;
-    const modelMatch = query.match(modelRegex);
-    if (modelMatch) {
-      attributes.model = `${modelMatch[1]} ${modelMatch[2]}`;
-    }
-    
-    // Extract storage sizes
-    const storageRegex = /(\d+)\s*(gb|tb|mb)/i;
-    const storageMatch = query.match(storageRegex);
-    if (storageMatch) {
-      attributes.storage = `${storageMatch[1]}${storageMatch[2].toUpperCase()}`;
-    }
-    
-    // Extract colors
-    const colors = ['black', 'white', 'blue', 'red', 'green', 'yellow', 'pink', 'purple', 'gold', 'silver'];
-    for (const color of colors) {
-      if (query.includes(color)) {
-        attributes.color = color;
-        break;
-      }
-    }
-    
-    return attributes;
+    return categoryQuery;
   }
 
-  createExactMatchQuery(query, attributes) {
+  calculateQueryConfidence(attributes, intent, category) {
+    let confidence = 0.5; // Base confidence
+    
+    // Boost confidence based on attribute completeness
+    if (attributes.brand) confidence += 0.1;
+    if (attributes.model) confidence += 0.2;
+    if (attributes.series) confidence += 0.1;
+    if (attributes.storage) confidence += 0.05;
+    if (attributes.color) confidence += 0.05;
+    
+    // Boost confidence based on intent clarity
+    if (intent.type === 'specific_model') confidence += 0.2;
+    if (intent.type === 'comparison') confidence += 0.1;
+    
+    // Boost confidence based on category classification
+    if (category.confidence > 0.8) confidence += 0.1;
+    if (category.confidence > 0.9) confidence += 0.1;
+    
+    // Special boost for specific model patterns
+    if (attributes.brand && attributes.model) {
+      const modelNum = attributes.model.match(/\d+/);
+      if (modelNum) {
+        const num = parseInt(modelNum[0]);
+        
+        // High confidence for known model ranges
+        if (attributes.brand === 'samsung' && attributes.series === 'galaxy' && 
+            attributes.model.toLowerCase().startsWith('s') && num >= 1 && num <= 25) {
+          confidence += 0.2;
+        }
+        
+        if (attributes.brand === 'apple' && attributes.model.toLowerCase().includes('iphone') && 
+            num >= 1 && num <= 15) {
+          confidence += 0.2;
+        }
+      }
+    }
+    
+    return Math.min(confidence, 1.0); // Cap at 1.0
+  }
+
+  // Legacy method for backward compatibility
+  parseProductAttributes(query) {
+    // Use the new advanced method but return simplified structure
+    const advancedAttributes = this.extractAdvancedAttributes(query);
+    
+    return {
+      brand: advancedAttributes.brand,
+      model: advancedAttributes.model,
+      size: advancedAttributes.size,
+      color: advancedAttributes.color,
+      storage: advancedAttributes.storage
+    };
+  }
+
+  createExactMatchQuery(query, attributes, category) {
     let exactQuery = query;
     
     // If we have a specific model, use exact matching
@@ -161,6 +584,11 @@ class QueryUnderstandingLayer {
         exactQuery = `"${attributes.brand} ${attributes.model}"`;
       }
       
+      // Add series if available (e.g., "Samsung Galaxy S25")
+      if (attributes.series) {
+        exactQuery = `"${attributes.brand} ${attributes.series} ${attributes.model}"`;
+      }
+      
       // Add storage if specified
       if (attributes.storage) {
         exactQuery += ` ${attributes.storage}`;
@@ -170,17 +598,29 @@ class QueryUnderstandingLayer {
       if (attributes.color) {
         exactQuery += ` ${attributes.color}`;
       }
+      
+      // Add variant if specified (e.g., Pro, Ultra, Plus)
+      if (attributes.variant) {
+        exactQuery += ` ${attributes.variant}`;
+      }
     } else if (attributes.brand) {
       // If only brand is specified, use exact brand matching
       exactQuery = `"${attributes.brand}"`;
     }
     
-    // Add exclusion terms to avoid accessories
-    const exclusionTerms = [
+    // Add category-specific exclusion terms
+    let exclusionTerms = [
       'case', 'cover', 'protector', 'screen guard', 'tempered glass',
       'charger', 'cable', 'adapter', 'stand', 'holder', 'mount',
       'accessory', 'accessories', 'spare', 'replacement', 'parts'
     ];
+    
+    // Add category-specific exclusions
+    if (category && category.primary === 'mobile_phones') {
+      exclusionTerms.push('washing machine', 'refrigerator', 'microwave', 'dishwasher');
+    } else if (category && category.primary === 'home_appliances') {
+      exclusionTerms.push('phone', 'smartphone', 'mobile', 'galaxy', 'iphone');
+    }
     
     exclusionTerms.forEach(term => {
       exactQuery += ` -${term}`;
@@ -195,6 +635,7 @@ class QueryUnderstandingLayer {
  */
 class MultiSourceRetrievalLayer {
   constructor() {
+    // Legacy API endpoints for backward compatibility
     this.apiEndpoints = [
       { name: 'google_shopping_api', priority: 1 },
       { name: 'google_shopping', priority: 2 },
@@ -204,12 +645,68 @@ class MultiSourceRetrievalLayer {
     
     // Initialize Google Shopping Service
     this.googleShoppingService = new GoogleShoppingService();
+    
+    // Initialize Hierarchical Retrieval Service (Stage 3)
+    this.hierarchicalRetrieval = new HierarchicalRetrievalService();
   }
 
   async searchProducts(processedQuery) {
+    // Use hierarchical retrieval if ML classification is available
+    if (processedQuery.category && processedQuery.category.mlResult) {
+      console.log('🤖 Using Hierarchical Retrieval (Stage 3)...');
+      return await this.searchWithHierarchicalRetrieval(processedQuery);
+    }
+    
+    // Fallback to legacy retrieval
+    console.log('🔄 Using Legacy Retrieval...');
+    return await this.searchWithLegacyRetrieval(processedQuery);
+  }
+
+  async searchWithHierarchicalRetrieval(processedQuery) {
+    console.log('🌐 Stage 3: Hierarchical Data Retrieval for:', processedQuery.processed);
+    
+    try {
+      const hierarchicalResults = await this.hierarchicalRetrieval.retrieveProducts(
+        processedQuery.processed,
+        processedQuery.category.mlResult,
+        {
+          minResults: 10,
+          targetResults: 20,
+          concurrency: 3,
+          scrapingConcurrency: 2,
+          tertiaryConcurrency: 1
+        }
+      );
+
+      // Combine all results
+      const allProducts = [
+        ...hierarchicalResults.primary,
+        ...hierarchicalResults.secondary,
+        ...hierarchicalResults.tertiary
+      ];
+
+      console.log(`✅ Hierarchical retrieval completed: ${allProducts.length} products from ${hierarchicalResults.metadata.totalSources} sources`);
+      
+      // Fallback to legacy retrieval if hierarchical retrieval returns too few results
+      if (allProducts.length < 3) {
+        console.log('⚠️ Hierarchical retrieval returned too few results, falling back to legacy retrieval...');
+        const legacyCandidates = await this.searchWithLegacyRetrieval(processedQuery);
+        allProducts.push(...legacyCandidates);
+        console.log(`📊 Combined results: ${allProducts.length} products`);
+      }
+      
+      return allProducts;
+
+    } catch (error) {
+      console.error('❌ Hierarchical retrieval failed, falling back to legacy:', error.message);
+      return await this.searchWithLegacyRetrieval(processedQuery);
+    }
+  }
+
+  async searchWithLegacyRetrieval(processedQuery) {
     const candidates = [];
     
-    console.log('🔍 Starting multi-source retrieval for:', processedQuery.processed);
+    console.log('🔍 Starting legacy multi-source retrieval for:', processedQuery.processed);
     
     // A. Primary APIs
     for (const api of this.apiEndpoints) {
@@ -316,11 +813,11 @@ class MultiSourceRetrievalLayer {
       // Fallback to Custom Search with shopping focus
       console.log('🔄 Falling back to Google Custom Search with shopping focus...');
       try {
-        return await this.googleShoppingService.searchWithCustomSearch(query.processed, {
-          maxResults: 20,
-          country: 'IN',
-          language: 'en'
-        });
+      return await this.googleShoppingService.searchWithCustomSearch(query.processed, {
+        maxResults: 20,
+        country: 'IN',
+        language: 'en'
+      });
       } catch (fallbackError) {
         console.error('❌ Google Custom Search fallback also failed:', fallbackError.message);
         
@@ -349,8 +846,8 @@ class MultiSourceRetrievalLayer {
   }
 
   async googleShoppingSearch(query) {
-    // Use exact match query for precise results
-    const searchQuery = query.exactMatch || query.processed;
+    // Use category-specific query if available, otherwise exact match
+    const searchQuery = query.categorySpecific || query.exactMatch || query.processed;
     
     // Google Custom Search API with shopping focus
     const searchParams = {
@@ -381,8 +878,8 @@ class MultiSourceRetrievalLayer {
   }
 
   async googleSearchFallback(query) {
-    // Use exact match query for precise results
-    const searchQuery = query.exactMatch || query.processed;
+    // Use category-specific query if available, otherwise exact match
+    const searchQuery = query.categorySpecific || query.exactMatch || query.processed;
     
     // Fallback to regular Google Search with shopping terms
     const searchParams = {
@@ -413,8 +910,8 @@ class MultiSourceRetrievalLayer {
   }
 
   async googleSearchIndian(query) {
-    // Use exact match query for precise results
-    const searchQuery = query.exactMatch || query.processed;
+    // Use category-specific query if available, otherwise exact match
+    const searchQuery = query.categorySpecific || query.exactMatch || query.processed;
     
     // Specialized search for Indian shopping sites
     const indianSites = [
@@ -516,7 +1013,7 @@ class MultiSourceRetrievalLayer {
     return items.map(item => ({
       title: item.title,
       description: item.snippet,
-      url: item.link,
+      url: this.ensureValidUrl(item.link),
       domain: extractDomain(item.link),
       image: this.extractImage(item),
       price: this.extractPrice(item),
@@ -524,6 +1021,17 @@ class MultiSourceRetrievalLayer {
       source_api: 'google_search',
       pagemap: item.pagemap || {}
     }));
+  }
+
+  ensureValidUrl(url) {
+    if (!url) return null;
+    
+    // If URL doesn't start with http/https, add https://
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      return `https://${url}`;
+    }
+    
+    return url;
   }
 
 
@@ -539,18 +1047,56 @@ class MultiSourceRetrievalLayer {
   }
 
   extractPrice(item) {
-    // Extract from structured data
+    // Extract from structured data first
     if (item.pagemap?.offer?.[0]?.price) {
-      return item.pagemap.offer[0].price;
+      const price = item.pagemap.offer[0].price;
+      return this.formatPrice(price);
     }
     if (item.pagemap?.product?.[0]?.price) {
-      return item.pagemap.product[0].price;
+      const price = item.pagemap.product[0].price;
+      return this.formatPrice(price);
     }
     
-    // Extract from text using regex
-    const priceRegex = /₹\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/i;
-    const match = (item.title + ' ' + item.snippet).match(priceRegex);
-    return match ? match[0] : null;
+    // Extract from text using multiple regex patterns
+    const text = (item.title + ' ' + item.snippet).toLowerCase();
+    
+    // Multiple price patterns
+    const pricePatterns = [
+      /₹\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/i,
+      /(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*₹/i,
+      /rs\.?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/i,
+      /(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*rs\.?/i,
+      /inr\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/i,
+      /(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*inr/i,
+      /price[:\s]*₹?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/i,
+      /cost[:\s]*₹?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/i,
+      /buy[:\s]*₹?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/i
+    ];
+    
+    for (const pattern of pricePatterns) {
+      const match = text.match(pattern);
+      if (match) {
+        const price = match[1] || match[0];
+        return this.formatPrice(price);
+      }
+    }
+    
+    return null;
+  }
+
+  formatPrice(price) {
+    if (!price) return null;
+    
+    // Remove any non-numeric characters except dots and commas
+    const cleanPrice = price.toString().replace(/[^\d.,]/g, '');
+    
+    // Convert to number
+    const numericPrice = parseFloat(cleanPrice.replace(/,/g, ''));
+    
+    if (isNaN(numericPrice)) return null;
+    
+    // Format as Indian Rupees
+    return `₹${numericPrice.toLocaleString('en-IN')}`;
   }
 
   extractRating(item) {
@@ -561,6 +1107,48 @@ class MultiSourceRetrievalLayer {
     const ratingRegex = /(\d+(?:\.\d+)?)\s*★/i;
     const match = (item.title + ' ' + item.snippet).match(ratingRegex);
     return match ? match[1] : null;
+  }
+
+  checkCategoryMatch(item, expectedCategory) {
+    const title = (item.title || '').toLowerCase();
+    const description = (item.description || '').toLowerCase();
+    const text = `${title} ${description}`;
+    
+    // Category-specific keyword checks
+    const categoryKeywords = {
+      'mobile_phones': ['phone', 'smartphone', 'mobile', 'galaxy', 'iphone', 'pixel', 'oneplus'],
+      'home_appliances': ['washing machine', 'refrigerator', 'microwave', 'dishwasher', 'dryer', 'oven'],
+      'electronics': ['tv', 'television', 'monitor', 'speaker', 'headphones', 'camera'],
+      'computers': ['laptop', 'desktop', 'computer', 'macbook', 'tablet', 'pc']
+    };
+    
+    // Exclusion keywords for each category
+    const exclusionKeywords = {
+      'mobile_phones': ['washing machine', 'refrigerator', 'microwave', 'dishwasher', 'tv', 'television', 'laptop', 'desktop'],
+      'home_appliances': ['phone', 'smartphone', 'mobile', 'galaxy', 'iphone', 'tv', 'television', 'laptop', 'desktop'],
+      'electronics': ['washing machine', 'refrigerator', 'microwave', 'dishwasher', 'phone', 'smartphone'],
+      'computers': ['washing machine', 'refrigerator', 'microwave', 'dishwasher', 'phone', 'smartphone', 'tv']
+    };
+    
+    const keywords = categoryKeywords[expectedCategory] || [];
+    const exclusions = exclusionKeywords[expectedCategory] || [];
+    
+    // Check for exclusion keywords first
+    for (const exclusion of exclusions) {
+      if (text.includes(exclusion)) {
+        return false;
+      }
+    }
+    
+    // Check for inclusion keywords
+    for (const keyword of keywords) {
+      if (text.includes(keyword)) {
+        return true;
+      }
+    }
+    
+    // If no clear match, be more lenient for high-confidence classifications
+    return true;
   }
 }
 
@@ -593,13 +1181,14 @@ class EcommerceFilterLayer {
     ];
   }
 
-  filterAndDeduplicate(candidates) {
+  filterAndDeduplicate(candidates, mlClassification = null) {
     const products = [];
     const seenGTINs = new Set();
     let domainFiltered = 0;
     let structuredDataFiltered = 0;
     let productChecksFiltered = 0;
     let duplicateFiltered = 0;
+    let categoryFiltered = 0;
     
     console.log(`🔍 Filtering ${candidates.length} candidates...`);
     
@@ -615,6 +1204,17 @@ class EcommerceFilterLayer {
         continue;
       }
       console.log(`   ✅ Domain passed: ${item.domain}`);
+      
+      // 1.5. Category-based filtering (if ML classification is available)
+      if (mlClassification && mlClassification.primary.confidence > 0.7) {
+        const categoryMatch = this.checkCategoryMatch(item, mlClassification.primary.category);
+        if (!categoryMatch) {
+          console.log(`   ❌ Category filtered: expected ${mlClassification.primary.category}`);
+          categoryFiltered++;
+        continue;
+      }
+        console.log(`   ✅ Category passed: ${mlClassification.primary.category}`);
+      }
       
       // 2. Structured-data check (disabled for now to be more lenient)
       console.log(`   ✅ Structured data check disabled (lenient mode)`);
@@ -645,6 +1245,7 @@ class EcommerceFilterLayer {
     
     console.log(`📊 Filtering results:`);
     console.log(`   - Domain filtered: ${domainFiltered}`);
+    console.log(`   - Category filtered: ${categoryFiltered}`);
     console.log(`   - Structured data filtered: ${structuredDataFiltered}`);
     console.log(`   - Product checks filtered: ${productChecksFiltered}`);
     console.log(`   - Duplicates filtered: ${duplicateFiltered}`);
@@ -892,6 +1493,43 @@ class EcommerceFilterLayer {
     return mainProductIndicators.some(pattern => pattern.test(text));
   }
 
+  checkCategoryMatch(item, expectedCategory) {
+    const title = (item.title || '').toLowerCase();
+    const description = (item.description || '').toLowerCase();
+    const combinedText = `${title} ${description}`;
+    
+    // Category-specific keyword matching
+    const categoryKeywords = {
+      'mobile_phones': ['phone', 'smartphone', 'mobile', 'galaxy', 'iphone', 'pixel', 'oneplus'],
+      'laptops': ['laptop', 'notebook', 'computer', 'macbook', 'dell', 'hp', 'lenovo'],
+      'tablets': ['tablet', 'ipad', 'samsung tablet', 'android tablet'],
+      'headphones': ['headphone', 'earphone', 'airpods', 'earbuds', 'wireless'],
+      'watches': ['watch', 'smartwatch', 'apple watch', 'galaxy watch'],
+      'cameras': ['camera', 'dslr', 'mirrorless', 'canon', 'nikon', 'sony'],
+      'home_appliances': ['washing', 'refrigerator', 'microwave', 'dishwasher', 'oven'],
+      'electronics': ['tv', 'television', 'monitor', 'speaker', 'audio']
+    };
+    
+    const keywords = categoryKeywords[expectedCategory] || [];
+    
+    if (keywords.length === 0) {
+      console.log(`     ⚠️ No keywords for category: ${expectedCategory}`);
+      return true; // Allow if no specific keywords defined
+    }
+    
+    const hasCategoryKeywords = keywords.some(keyword => 
+      combinedText.includes(keyword)
+    );
+    
+    if (hasCategoryKeywords) {
+      console.log(`     ✅ Category match: ${expectedCategory}`);
+      return true;
+    }
+    
+    console.log(`     ❌ Category mismatch: expected ${expectedCategory}, found: ${title}`);
+    return false;
+  }
+
   extractGTIN(item) {
     // Extract GTIN/ASIN/EAN from URL or structured data
     const asinRegex = /[A-Z0-9]{10}/;
@@ -912,22 +1550,35 @@ class EcommerceFilterLayer {
   }
 
   normalizeProduct(item) {
+    const validUrl = this.ensureValidUrl(item.url);
+    
     return {
-      id: item.url,
+      id: validUrl || item.id || Math.random().toString(36),
       title: item.title,
       description: item.description,
-      url: item.url,
+      url: validUrl,
       image: item.image,
       price: item.price,
       rating: item.rating,
       seller: item.domain,
       domain: item.domain,
-      buy_url: item.url,
+      buy_url: validUrl,
       source_api: item.source_api,
       gtin: this.extractGTIN(item),
       availability: this.determineAvailability(item),
       reviews: this.extractReviewCount(item)
     };
+  }
+
+  ensureValidUrl(url) {
+    if (!url) return null;
+    
+    // If URL doesn't start with http/https, add https://
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      return `https://${url}`;
+    }
+    
+    return url;
   }
 
   determineAvailability(item) {
@@ -986,16 +1637,36 @@ class RelevanceRankingEngine {
 
   rankProducts(query, products) {
     return products.map(product => {
+      // Use semantic scores from Stage 4 if available, otherwise calculate traditional scores
+      const semanticScores = product.semanticScores;
+      
       const scores = {
-        lexical: this.calculateLexicalScore(query, product),
-        semantic: this.calculateSemanticScore(query, product),
+        lexical: semanticScores?.lexical || this.calculateLexicalScore(query, product),
+        semantic: semanticScores?.semantic || this.calculateSemanticScore(query, product),
+        attribute: semanticScores?.attribute || 0,
+        crossModal: semanticScores?.crossModal || 0,
         business: this.calculateBusinessScore(product),
         behavioral: this.calculateBehavioralScore(product)
       };
       
-      const finalScore = Object.entries(scores).reduce((total, [key, score]) => {
+      // Enhanced scoring with Stage 4 semantic scores
+      let finalScore = 0;
+      
+      if (semanticScores) {
+        // Use Stage 4 weighted relevance score as base
+        finalScore = (semanticScores.relevance || 0) * 60; // 60% weight for semantic relevance
+        
+        // Add business and behavioral scores
+        finalScore += scores.business * 0.25; // 25% weight for business factors
+        finalScore += scores.behavioral * 0.15; // 15% weight for behavioral factors
+        
+        console.log(`🎯 Enhanced scoring for "${product.title}": Semantic=${semanticScores.relevance?.toFixed(3)}, Business=${scores.business.toFixed(1)}, Final=${finalScore.toFixed(1)}`);
+      } else {
+        // Fallback to traditional scoring
+        finalScore = Object.entries(scores).reduce((total, [key, score]) => {
         return total + (score * this.weights[key]);
       }, 0);
+      }
       
       return { ...product, scores, finalScore };
     }).sort((a, b) => b.finalScore - a.finalScore);
@@ -1100,6 +1771,8 @@ class ProductSearchService {
     this.retrievalLayer = new MultiSourceRetrievalLayer();
     this.filterLayer = new EcommerceFilterLayer();
     this.rankingEngine = new RelevanceRankingEngine();
+    this.semanticMatcher = new SemanticMatchingService();
+    this.advancedFilter = new AdvancedFilteringService();
   }
 
   async searchProducts(query, options = {}) {
@@ -1121,23 +1794,42 @@ class ProductSearchService {
     
     try {
       // 1. Query Understanding
-      const processedQuery = this.queryLayer.preprocessQuery(query);
+      const processedQuery = await this.queryLayer.preprocessQuery(query);
       
       // 2. Multi-Source Retrieval
       const candidates = await this.retrievalLayer.searchProducts(processedQuery);
       
-      // 3. E-commerce Filter & Deduplication
+      // 3. E-commerce Filter & Deduplication (with ML classification)
       console.log('🔍 Starting e-commerce filtering...');
-      const products = this.filterLayer.filterAndDeduplicate(candidates);
+      const products = this.filterLayer.filterAndDeduplicate(candidates, processedQuery.category.mlResult);
       console.log(`✅ Filtering completed. Products after filtering: ${products.length}`);
       
-      // 4. Relevance & Ranking
-      console.log('🔍 Starting relevance ranking...');
-      const rankedProducts = this.rankingEngine.rankProducts(processedQuery, products);
-      console.log(`✅ Ranking completed. Ranked products: ${rankedProducts.length}`);
+      // 4. Semantic Matching & Relevance Scoring (Stage 4)
+      console.log('🔍 Starting semantic matching and scoring...');
+      const semanticallyScoredProducts = await this.semanticMatcher.calculateSemanticScores(
+        products, 
+        query, 
+        processedQuery.category.mlResult
+      );
+      console.log(`✅ Semantic scoring completed. Scored products: ${semanticallyScoredProducts.length}`);
       
-      // 5. Result Packaging
-      const results = this.formatResponse(rankedProducts.slice(0, CONFIG.TOP_N), query);
+      // 5. Relevance & Ranking (enhanced with semantic scores)
+      console.log('🔍 Starting enhanced relevance ranking...');
+      const rankedProducts = this.rankingEngine.rankProducts(processedQuery, semanticallyScoredProducts);
+      console.log(`✅ Enhanced ranking completed. Ranked products: ${rankedProducts.length}`);
+      
+      // 6. Advanced Filtering & Re-ranking (Stage 5)
+      console.log('🔍 Starting advanced filtering and re-ranking...');
+      console.log(`📊 Passing ML Classification to Stage 5:`, processedQuery.category.mlResult);
+      const advancedFilteredProducts = await this.advancedFilter.applyAdvancedFiltering(
+        rankedProducts, 
+        query, 
+        processedQuery.category.mlResult
+      );
+      console.log(`✅ Advanced filtering completed. Final products: ${advancedFilteredProducts.length}`);
+      
+      // 6. Result Packaging
+      const results = this.formatResponse(advancedFilteredProducts.slice(0, CONFIG.TOP_N), query);
       
       // Cache results
       searchCache.set(cacheKey, {
@@ -1176,6 +1868,7 @@ class ProductSearchService {
               reviews: product.reviews,
               seller: product.seller,
               domain: product.domain,
+              url: product.buy_url || product.url, // Use buy_url as primary, fallback to url
           buy_url: product.buy_url,
           source_api: product.source_api,
           image: product.image,

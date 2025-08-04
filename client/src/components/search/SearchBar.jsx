@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, Mic, Camera, X, Loader2 } from 'lucide-react';
+import { Search, Mic, Camera, X, Loader2, Settings } from 'lucide-react';
 import { useSearch } from '../../context/SearchContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import AnimatedCharacter from './AnimatedCharacter';
+import CharacterSettings from './CharacterSettings';
 
 const SearchBar = ({ onSearch, className = '' }) => {
   const {
@@ -19,8 +21,12 @@ const SearchBar = ({ onSearch, className = '' }) => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [triggerCharacterExcitement, setTriggerCharacterExcitement] = useState(false);
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
+  const searchBarRef = useRef(null);
 
   // Debounced suggestions
   useEffect(() => {
@@ -39,10 +45,16 @@ const SearchBar = ({ onSearch, className = '' }) => {
   // Handle search submission
   const handleSearch = (searchQuery = query) => {
     if (searchQuery.trim()) {
+      setIsSearching(true);
       searchProducts(searchQuery);
       setShowSuggestions(false);
       setIsFocused(false);
       onSearch?.(searchQuery);
+      
+      // Reset searching state after a delay
+      setTimeout(() => {
+        setIsSearching(false);
+      }, 2000);
     }
   };
 
@@ -92,12 +104,39 @@ const SearchBar = ({ onSearch, className = '' }) => {
     }
   };
 
+  // Handle character action
+  const handleCharacterAction = () => {
+    // Focus the search input when character is clicked
+    inputRef.current?.focus();
+    setIsFocused(true);
+  };
+
+  // Handle search bar click to trigger character excitement
+  const handleSearchBarClick = () => {
+    console.log('🔍 Search bar clicked! Triggering character excitement...');
+    // Trigger character excitement when search bar is clicked
+    setTriggerCharacterExcitement(true);
+    // Reset after a short delay
+    setTimeout(() => {
+      setTriggerCharacterExcitement(false);
+    }, 100);
+  };
+
   return (
     <div className={`relative w-full max-w-4xl mx-auto ${className}`}>
+      {/* Animated Character */}
+      <AnimatedCharacter
+        isSearchFocused={isFocused}
+        isSearching={isSearching}
+        searchBarRef={searchBarRef}
+        onCharacterAction={handleCharacterAction}
+        triggerExcitement={triggerCharacterExcitement}
+      />
+      
       {/* Main Search Input */}
-      <div className="relative">
+      <div className="relative" ref={searchBarRef}>
         <motion.div
-          className={`relative flex items-center bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl transition-all duration-300 ${
+          className={`relative flex items-center bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-2xl transition-all duration-300 cursor-pointer ${
             isFocused 
               ? 'border-purple-500/50 shadow-lg shadow-purple-500/20' 
               : 'hover:border-gray-600/50'
@@ -108,6 +147,7 @@ const SearchBar = ({ onSearch, className = '' }) => {
               ? '0 0 30px rgba(139, 92, 246, 0.3)' 
               : '0 0 0px rgba(139, 92, 246, 0)'
           }}
+          onClick={handleSearchBarClick}
         >
           {/* Search Icon */}
           <div className="pl-4 pr-3">
@@ -165,6 +205,17 @@ const SearchBar = ({ onSearch, className = '' }) => {
               ) : (
                 <Camera className="w-4 h-4" />
               )}
+            </motion.button>
+
+            {/* Character Settings */}
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowSettings(true)}
+              className="p-2 rounded-full bg-gray-700/50 text-gray-400 hover:bg-gray-600/50 hover:text-gray-300 transition-colors"
+              title="Character Settings"
+            >
+              <Settings className="w-4 h-4" />
             </motion.button>
 
             {/* Clear Button */}
@@ -268,6 +319,12 @@ const SearchBar = ({ onSearch, className = '' }) => {
           </div>
         </motion.div>
       )}
+
+      {/* Character Settings Modal */}
+      <CharacterSettings
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+      />
     </div>
   );
 };
