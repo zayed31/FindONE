@@ -132,7 +132,7 @@ Create `server/.env` file:
 
 ```env
 # MongoDB Configuration
-MONGO_URI=mongodb+srv://your_username:your_password@cluster.mongodb.net/findone?retryWrites=true&w=majority
+MONGO_URI=mongodb+srv://your_username:your_password@cluster.mongodb.net/?retryWrites=true&w=majority
 
 # JWT Configuration
 JWT_SECRET=your_super_secret_jwt_key_here_make_it_long_and_random
